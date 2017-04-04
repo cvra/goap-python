@@ -6,8 +6,13 @@ Simulates an Eurobot 2017 robot that has to fetches rocks from craters and retur
 """
 
 import argparse
+import random
 
 import goap
+
+
+class ActionExecutionError(RuntimeError):
+    pass
 
 
 class Action:
@@ -17,6 +22,9 @@ class Action:
     preRequisite = {}
     effect = {}
     cost = 0.
+
+    def execute(self, state):
+        pass
 
 
 class EmptyCrater(Action):
@@ -37,8 +45,20 @@ class EmptyCrater(Action):
             'robot_full': True,
         }
 
-    def execute(self):
-        print("Fetching rocks from crater #{}".format(self.crater))
+    def execute(self, state):
+        print("Fetching rocks from crater #{}\t".format(self.crater), end='')
+
+        # 30% chance of failure:
+        if random.random() < 0.3:
+            print("FAIL")
+            raise ActionExecutionError
+
+        state.update({
+            'crater{}_empty'.format(self.crater): True,
+            'robot_full': True,
+        })
+
+        print("OK")
 
 
 class DepositRocks(Action):
@@ -49,8 +69,9 @@ class DepositRocks(Action):
 
     effect = {'robot_full': False}
 
-    def execute(self):
+    def execute(self, state):
         print("Emptying robot in cargo bay")
+        state.update({'robot_full': False, })
 
 
 ACTIONS = [EmptyCrater(i) for i in range(6)] + [DepositRocks()]
@@ -74,12 +95,16 @@ def setup_goal():
     return goal
 
 
-def execute_game(initial_state, goal):
-    plan, cost = goap.plan(goal, initial_state, ACTIONS, max_plan_length=20)
+def execute_game(state, goal):
+    plan, cost = goap.plan(goal, state, ACTIONS, max_plan_length=20)
 
     while plan:
         action = plan.pop(0)
-        action.execute()
+        try:
+            action.execute(state)  # also update states
+        except ActionExecutionError:
+            # If an action failed, replan
+            plan, cost = goap.plan(goal, state, ACTIONS, max_plan_length=20)
 
 
 def parse_args():
