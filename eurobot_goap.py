@@ -1,4 +1,14 @@
+#!/usr/bin/env python3
+"""
+A simple demo application for the Goal Oriented Action Planner.
+
+Simulates an Eurobot 2017 robot that has to fetches rocks from craters and returns them to base.
+"""
+
+import argparse
+
 import goap
+
 
 class Action:
     """
@@ -35,39 +45,53 @@ class DepositRocks(Action):
     """
     Go put rocks in the cargo bay.
     """
-    preRequisite = {
-        'robot_full': True
-    }
+    preRequisite = {'robot_full': True}
 
-    effect = {
-        'robot_full': False
-    }
+    effect = {'robot_full': False}
 
     def execute(self):
         print("Emptying robot in cargo bay")
 
-ACTIONS = [EmptyCrater(i) for i in range(6)] + [
-    DepositRocks()
-]
 
-state = {
-    'robot_full': True
-}
+ACTIONS = [EmptyCrater(i) for i in range(6)] + [DepositRocks()]
 
-for i in range(6):
-    state['crater{}_empty'.format(i)] = False
 
-goal = {
-    'robot_full': False
-}
+def setup_state():
+    state = {'robot_full': True}
 
-for i in range(6):
-    goal['crater{}_empty'.format(i)] = True
+    for i in range(6):
+        state['crater{}_empty'.format(i)] = False
 
-plan, cost = goap.plan(goal, state, ACTIONS, max_plan_length=20)
+    return state
 
-if plan is None:
-    print("Cannot find a plan!")
-else:
-    for action in plan:
+
+def setup_goal():
+    goal = {'robot_full': False}
+
+    for i in range(6):
+        goal['crater{}_empty'.format(i)] = True
+
+    return goal
+
+
+def execute_game(initial_state, goal):
+    plan, cost = goap.plan(goal, initial_state, ACTIONS, max_plan_length=20)
+
+    while plan:
+        action = plan.pop(0)
         action.execute()
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(description=__doc__)
+
+    return parser.parse_args()
+
+
+def main():
+    args = parse_args()
+    execute_game(setup_state(), setup_goal())
+
+
+if __name__ == '__main__':
+    main()
