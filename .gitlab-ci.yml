@@ -1,0 +1,5 @@
+image: python:3.5
+
+tests:
+  script:
+    - python -m unittest discover
