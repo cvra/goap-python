@@ -1,8 +1,7 @@
 import goap
-from unittest import TestCase
+from unittest import TestCase, skip
 
-
-class Planner(TestCase):
+class PlannerTestCase:
     class GrabWood:
         preRequisite = {}
         effect = {'hasWood': True}
@@ -29,9 +28,9 @@ class Planner(TestCase):
         """
         state = {'foo': True}
         goal = state
-        plan, cost = goap.plan(goal, state, [self.GrabFood])
-        self.assertEqual([], plan)
+        plan, cost = self.plan(goal, state, [self.GrabFood])
         self.assertEqual(0., cost)
+        self.assertEqual([], plan)
 
     def test_simple_case(self):
         """
@@ -42,7 +41,7 @@ class Planner(TestCase):
         possible_actions = [self.GrabWood]
         expected_plan = [self.GrabWood]
 
-        plan, cost = goap.plan(goal, state, possible_actions)
+        plan, cost = self.plan(goal, state, possible_actions)
 
         self.assertEqual(expected_plan, plan)
         self.assertEqual(self.GrabWood.cost, cost)
@@ -56,7 +55,7 @@ class Planner(TestCase):
         possible_actions = [self.GrabFood, self.GrabAxe]
         expected_plan = [self.GrabAxe, self.GrabFood]
 
-        plan, cost = goap.plan(goal, state, possible_actions)
+        plan, cost = self.plan(goal, state, possible_actions)
 
         # Order may vary here
         self.assertEqual(
@@ -75,7 +74,7 @@ class Planner(TestCase):
         possible_actions = [self.CutLog, self.GrabAxe]
         expected_plan = [self.GrabAxe, self.CutLog]
 
-        plan, cost = goap.plan(goal, state, possible_actions)
+        plan, cost = self.plan(goal, state, possible_actions)
 
         self.assertEqual(plan, expected_plan,
                          "Prerequisites do not seem to be respected.")
@@ -88,11 +87,25 @@ class Planner(TestCase):
         GrabAxe + CutWood combo. The planner should go through the cheaper
         route.
         """
-        state = {}
+        state = {'hasWood': False}
         goal = {'hasWood': True}
         possible_actions = [self.GrabWood, self.CutLog, self.GrabAxe]
         expected_plan = [self.GrabAxe, self.CutLog]
 
-        plan, cost = goap.plan(goal, state, possible_actions)
+        plan, cost = self.plan(goal, state, possible_actions)
 
         self.assertEqual(plan, expected_plan, "Should take cheaper route")
+
+
+class SlowPlannerTestCase(TestCase, PlannerTestCase):
+    def plan(self, *args, **kwargs):
+        return goap.plan(*args, **kwargs)
+
+class FastPlannerTestCase(TestCase, PlannerTestCase):
+    def plan(self, *args, **kwargs):
+        return goap.fast_plan(*args, **kwargs)
+
+    def test_distance_heuristics(self):
+        state = {'foo': True, 'bar': False, 'baz': True}
+        goal = {'foo': True, 'bar': True, 'babaz': True}
+        self.assertEqual(goap.distance(state, goal), 2)
